@@ -133,10 +133,16 @@ M.str_to_cache = function(filename, str)
   -- It helped me understand string.dump stuff
   local lines = "return string.dump(function()" .. str .. "end, true)"
   local file = io.open(cache_path .. filename, "wb")
+  local file_lua = io.open(cache_path .. filename .. '.lua', "wb")
 
   if file then
     file:write(loadstring(lines)())
     file:close()
+  end
+
+  if file_lua then
+    file_lua:write(str)
+    file_lua:close()
   end
 end
 
