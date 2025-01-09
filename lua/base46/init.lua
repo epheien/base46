@@ -1,7 +1,6 @@
 local M = {}
 local g = vim.g
 local opts = require("nvconfig").base46
-local cache_path = vim.g.base46_cache
 
 local integrations = {
   "blankline",
@@ -132,8 +131,8 @@ M.str_to_cache = function(filename, str)
   -- Thanks to https://github.com/nullchilly and https://github.com/EdenEast/nightfox.nvim
   -- It helped me understand string.dump stuff
   local lines = "return string.dump(function()" .. str .. "end, true)"
-  local file = io.open(cache_path .. filename, "wb")
-  local file_lua = io.open(cache_path .. filename .. '.lua', "wb")
+  local file = io.open(filename, "wb")
+  local file_lua = io.open(filename .. ".lua", "wb")
 
   if file then
     file:write(loadstring(lines)())
@@ -146,13 +145,18 @@ M.str_to_cache = function(filename, str)
   end
 end
 
-M.compile = function()
-  if not vim.uv.fs_stat(vim.g.base46_cache) then
-    vim.fn.mkdir(cache_path, "p")
+M.compile = function(folder)
+  folder = folder or vim.g.base46_cache
+  if not vim.uv.fs_stat(folder) then ---@diagnostic disable-line: undefined-field
+    vim.fn.mkdir(folder, "p")
   end
 
-  M.str_to_cache("term", require "base46.term")
-  M.str_to_cache("colors", require "base46.color_vars")
+  local str_to_cache = function(filename, str)
+    return M.str_to_cache(vim.fs.joinpath(folder, filename), str)
+  end
+
+  str_to_cache("term", require "base46.term")
+  str_to_cache("colors", require "base46.color_vars")
 
   for _, name in ipairs(integrations) do
     local hl_str = M.tb_2str(M.get_integration(name))
@@ -161,7 +165,7 @@ M.compile = function()
       hl_str = "vim.o.tgc=true vim.o.bg='" .. M.get_theme_tb "type" .. "' " .. hl_str
     end
 
-    M.str_to_cache(name, hl_str)
+    str_to_cache(name, hl_str)
   end
 end
 
